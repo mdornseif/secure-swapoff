@@ -1,7 +1,7 @@
 /*
  * swappoff - turning off swapspace and scramble the data on the device
  *
- * $Id: swapoff.c,v 1.1 2000/04/11 08:48:38 drt Exp $
+ * $Id: swapoff.c,v 1.2 2000/04/11 08:54:24 drt Exp $
  *
  * Based on mkswap and swapon
  *
@@ -17,7 +17,10 @@
  * swapoff was hacked 1999 by Doobee R. Tzeck <drt@ailis.de>
  *
  * $Log: swapoff.c,v $
- * Revision 1.1  2000/04/11 08:48:38  drt
+ * Revision 1.2  2000/04/11 08:54:24  drt
+ * swapoff 0.01a
+ *
+ * Revision 1.1  2000/02/19 15:33:48  drt
  * Initial revision
  *
  *
@@ -32,6 +35,7 @@
 #include <time.h>
 #include <errno.h>
 #include <mntent.h> 
+#include <signal.h>
 #include <sys/ioctl.h>		/* for _IO */
 #include <sys/utsname.h>
 #include <sys/stat.h>
@@ -68,8 +72,9 @@ unsigned long randomMT(void);
 #define PROC_SWAPS      "/proc/swaps" 
 
 static char *version = "0.01 alpha";
-static char *rcsid = "$Id: swapoff.c,v 1.1 2000/04/11 08:48:38 drt Exp $";
-static char * device_name = "/dev/sdb9";
+static char *rcsid = "$Id: swapoff.c,v 1.2 2000/04/11 08:54:24 drt Exp $";
+static char *superparanoidmode = "MRTj0m1m2m3m4m5m6m7m8m9mambmcmdmemfu";
+static char *paranoidmode = "Mumtmrm3m9mcm";
 
 // our global configuration
 int verbose = 0;
@@ -80,6 +85,7 @@ int all = 0;
 int debug = 3;
 off_t reseed = 1024;
 char *overwritemode = "mmmmm";
+int shutdowndevice = -1;
 
 /* The definition of the union swap_header uses the constant PAGE_SIZE.
  * Unfortunately, on some architectures this depends on the hardware model,
@@ -88,6 +94,7 @@ char *overwritemode = "mmmmm";
 
 static int pagesize;
 static int *signature_page;
+long pages;
 
 struct swap_header_v1 {
   char         bootbits[1024];    /* Space for disklabel etc. */
@@ -129,9 +136,9 @@ void usage(void)
 	  fprintf(stderr, "              blocks\n");
 	  fprintf(stderr, "       -l     total low security mode. The same as -m m\n");
 	  fprintf(stderr, "       -p     paranoid mode - you should use this. The same as -m\n");
-	  fprintf(stderr, "              YFT8u4j0tBJ\n");
+	  fprintf(stderr, "              %s\n", paranoidmode);
 	  fprintf(stderr, "       -P     extra   paranoid   mode.    The    same    as    -m\n");
-	  fprintf(stderr, "              YFDT8aceu12u34t56r79j0bJ\n");
+	  fprintf(stderr, "              %s\n", superparanoidmode);
 	  fprintf(stderr, "       -m     use the methods given in <methods> to overwrite the\n");
 	  fprintf(stderr, "              partitions. See below for valid Methods\n");
 	  fprintf(stderr, "       -s     do not open with O_SYNC\n");
@@ -150,8 +157,8 @@ void usage(void)
 	  fprintf(stderr, "       m      write data generated with the Mersenne Twister\n");
 	  fprintf(stderr, "       Y      encrypt  disk  contents  with rijandel and a random\n");
 	  fprintf(stderr, "              key\n");
-	  fprintf(stderr, "       R, U, J, T\n");
-	  fprintf(stderr, "              the same as r, u, j, t but xor the  date  with  the\n");
+	  fprintf(stderr, "       R, U, J, T, M\n");
+	  fprintf(stderr, "              the same as r, u, j, t, m but xor the  date  with  the\n");
 	  fprintf(stderr, "              old data on the disk\n");
 	  
 }
@@ -446,6 +453,8 @@ int write_random(int device, unsigned long total_pages, char mode)
   int status = 1;
   char IV[16];
   word8 rKeySched[MAXROUNDS+1][4][4];
+
+  buffer2 = NULL;
 
   /* go to the beginning of the device */
   if (lseek(device,0,SEEK_SET) != 0)
@@ -767,14 +776,46 @@ int write_random(int device, unsigned long total_pages, char mode)
   return status;
 }
 
+int mkswap(int device)
+{  
+  int goodpages, status = 0;
+  int offset; 
 
+  /* create new swapspace */
+  p->version = 1;
+  p->last_page = pages-1;
+  p->nr_badpages = 0;
+  
+  goodpages = pages - 1;
+  
+  printf(" size = %ld bytes",
+	 (long)(goodpages*pagesize));
+  
+  write_signature("SWAPSPACE2");
+  
+  offset = (1024);
+  if (lseek(device, offset, SEEK_SET) != offset)
+    {
+      perror("unable to rewind swap-device");
+      status++;
+    }
+  else
+    {
+      if (write(device,(char*)signature_page+offset, pagesize-offset)
+	  != pagesize-offset)
+	{
+	  perror("unable to write signature page");
+	  status++;
+	}
+    }
+  return status;
+}
 
 int handle_disk(char *name)
 {
   struct stat statbuf;
-  int goodpages, status = 0;
-  int offset, device = -1;
-  long pages;
+  int device = -1;
+  int status = 0;
   char *stage;
   
   if(!quiet)
@@ -827,80 +868,83 @@ int handle_disk(char *name)
   
   if (device < 0 || fstat(device, &statbuf) < 0) 
     {
-      perror(device_name);
-    }
-
-  if(!quiet)
-    {
-      printf("\b cleaning ");
-      fflush(stdout);
-    }
-
-  for(stage = overwritemode; *stage; stage++)
-    {
-      if(verbose)
-	{
-	  printf("%c", *stage);
-	  fflush(stdout);
-	}
-      /* write random data to the disk */
-      status |= write_random(device, pages, *stage);
-    }
-
-  if(!quiet)
-    {
-      printf("\b, mkfswap ");
-      fflush(stdout);
-    }
-
-  /* create new swapspace */
-  p->version = 1;
-  p->last_page = pages-1;
-  p->nr_badpages = 0;
-  
-  goodpages = pages - 1;
-  
-  printf(" size = %ld bytes",
-	 (long)(goodpages*pagesize));
-  
-  write_signature("SWAPSPACE2");
-  
-  offset = (1024);
-  if (lseek(device, offset, SEEK_SET) != offset)
-    {
-      perror("unable to rewind swap-device");
+      perror(name);
       status++;
     }
   else
     {
-      if (write(device,(char*)signature_page+offset, pagesize-offset)
-	  != pagesize-offset)
+      shutdowndevice = device;
+
+      if(!quiet)
 	{
-	  perror("unable to write signature page");
+	  printf("\b cleaning ");
+	  fflush(stdout);
+	}
+      
+      for(stage = overwritemode; *stage; stage++)
+	{
+	  if(verbose)
+	    {
+	      printf("%c", *stage);
+	      fflush(stdout);
+	    }
+	  /* write random data to the disk */
+	  status |= write_random(device, pages, *stage);
+	}
+      
+      if(!quiet)
+	{
+	  printf(", mkfswap ");
+	  fflush(stdout);
+	}
+      
+      status |= mkswap(device);
+      
+      /*
+       * A subsequent swapon() will fail if the signature
+       * is not actually on disk. (This is a kernel bug.)
+       */
+      
+      if (fsync(device))
+	{
+	  perror("fsync failed");
 	  status++;
 	}
-    }
 
-  /*
-   * A subsequent swapon() will fail if the signature
-   * is not actually on disk. (This is a kernel bug.)
-   */
- 
-  if (fsync(device))
-    {
-      perror("fsync failed");
-      status++;
-    }
-  
-
-  if(!quiet)
-    {
-      printf("\n");
-      fflush(stdout);
+      close(device);
+      shutdowndevice = -1;
+      
+      if(!quiet)
+	{
+	  printf("\n");
+	  fflush(stdout);
+	}
     }
 
   return status;
 }
+
+
+void cleanup() 
+{
+  int status = 1; 
+  fprintf(stderr,"\nTerminated by signal. Clean exit.\n");
+  if(shutdowndevice != -1)
+    {
+      /* we need to setup swapspace zu keep the partition intact
+	 before exiting */
+      
+      status |= mkswap(shutdowndevice);      
+      fsync(shutdowndevice);
+      sync();
+      close(shutdowndevice);
+    }
+  fflush(stdout);
+  fflush(stderr);
+  sync();
+  exit(status);
+}
+
 
 int main(int argc, char ** argv)
 {
@@ -938,10 +982,10 @@ int main(int argc, char ** argv)
 	  overwritemode = "m";
 	  break;
 	case 'p':
-	  overwritemode = "YFT8u4j0tBJ";
+	  overwritemode = paranoidmode;
 	  break;
 	case 'P':
-	  overwritemode = "YFDT8aceu12u34t56r79j0bJ";
+	  overwritemode = superparanoidmode;
 	  break;
 	case 'm':
 	  overwritemode = optarg;
@@ -973,6 +1017,14 @@ int main(int argc, char ** argv)
       fprintf(stderr, "no swapdevice selected\n");
       exit(1);
     }
+
+  /* unbufferd stdout */
+  setvbuf(stdout, NULL, _IONBF, 0);
+
+  /* install signal handlers for clean shutdown */
+  signal(SIGINT, cleanup);
+  signal(SIGTERM, cleanup);
+  signal(SIGHUP, cleanup);
 
   // iterate through the remaining arguments
   for(c = optind; c < argc; c++)

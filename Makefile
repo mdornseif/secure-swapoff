@@ -1,8 +1,9 @@
 CC = gcc
-CFLAGS=-Wall -g -pg
-PROGS=swapoff
-DIST = Makefile mt19937-cokus.c rijndael.c swapoff.1 swapoff.c tiger.c
-VERSION =0.01
+CFLAGS = -Wall -O3
+PROGS = swapoff
+DIST = Makefile mt19937-cokus.c rijndael.c swapoff.c tiger.c swapoff.8 CHANGES README  
+VERSION = 0.01
+DISTRIBUTION = a
 
 srcdir = .
 
@@ -10,15 +11,14 @@ all: $(PROGS)
 
 swapoff: swapoff.o mt19937-cokus.o rijndael.o tiger.o
 	$(CC) $(CFLAGS) -o $@ $^ 
-
+	strip $@
 clean:
 	rm -f *.o swapoff core
 
 FTPDIR   = .
-FTP_DIST = $(FTPDIR)/swapoff-$(VERSION).tar.gz     
+FTP_DIST = $(FTPDIR)/swapoff-$(VERSION)$(DISTRIBUTION).tar.gz     
 
-# build zsh distribution
-distdir = ./swapoff-$(VERSION)
+distdir = ./swapoff-$(VERSION)$(DISTRIBUTION)
 dist: $(DIST)
 	@echo "Copying distribution files in $(srcdir)" ; \
 	echo "$(distdir)" > distname

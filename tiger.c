@@ -1,3 +1,21 @@
+/* Tiger: A Fast New Hash Function
+ * by biham@cs.technion.ac.il and rja14@cl.cam.ac.uk.
+ * http://www.cs.technion.ac.il/~biham/Reports/Tiger/
+ * 
+ * $Id: tiger.c,v 1.2 2000/04/11 08:54:24 drt Exp $
+ * 
+ * $Log: tiger.c,v $
+ * Revision 1.2  2000/04/11 08:54:24  drt
+ * swapoff 0.01a
+ *
+ * Revision 1.2  2000/02/19 16:21:41  drt
+ * fixed compile-time warnings
+ *
+ * Revision 1.1  2000/02/19 15:43:36  drt
+ * Initial revision
+ *
+ */
+
 typedef unsigned long long int word64;
 typedef unsigned long word32;
 typedef unsigned char byte;
@@ -125,7 +143,6 @@ extern word64 table[4*256];
   register word64 a, b, c, tmpa; \
   word64 aa, bb, cc; \
   register word64 x0, x1, x2, x3, x4, x5, x6, x7; \
-  register word32 i; \
   int pass_no; \
 \
   a = state[0]; \
@@ -143,7 +160,7 @@ extern word64 table[4*256];
 }
 
 /* The compress function is a function. Requires smaller cache?    */
-tiger_compress(word64 *str, word64 state[3])
+void tiger_compress(word64 *str, word64 state[3])
 {
   tiger_compress_macro(((word64*)str), ((word64*)state));
 }
@@ -156,7 +173,7 @@ tiger_compress(word64 *str, word64 state[3])
   tiger_compress_macro(((word64*)str), ((word64*)state))
 #endif
 
-tiger(word64 *str, word64 length, word64 res[3])
+void tiger(word64 *str, word64 length, word64 res[3])
 {
   register word64 i, j;
   unsigned char temp[64];
