@@ -1,0 +1,31 @@
+swapoff (paranoia edition) THANKS file
+
+swapoff (paranoia edition) has originally been written by Doobee R. Tzeck.
+Many people have further contributed to swapoff by reporting problems, 
+suggesting various improvements, or submitting actual code. Here is
+a list of these people. Help me keep it complete and exempt of errors.
+
+* mkswap and swapon were hacked by:
+ Linus Torvalds, jaggy@purplet.demon.co.uk (Mike Jagdis),
+ jj@ultra.linux.cz (Jakub Jelinek), aeb, Arkadiusz Mi¶kiewicz
+ <misiek@misiek.eu.org>, jrs, <Vincent.Renardias@waw.com>, Arnaldo
+ Carvalho de Melo <acme@conectiva.com.br>, jj
+
+* The C version of the rijndael encryption algorithm was done by: 
+ Antoon Bosselaers
+ Vincent Rijmen
+
+* The version of the Mersenne Twister used in this release was developed by 
+a bunch of people, see src/mt19937-cokus.c for a full list. The main 
+actors are:
+ Shawn Cokus (Cokus@math.washington.edu) 
+ Takuji Nishimura
+
+* The tiger hash function was done by: 
+ biham@cs.technion.ac.il 
+ rja14@cl.cam.ac.uk
+
+* Jens Ohlig <jo@koeln.ccc.de> rolled this autoconf distribution and found
+typos in the documentation
+
+* Members of the mailing list mongo@koeln.ccc.de did the beta testing

@@ -1,0 +1,21 @@
+# Copyright (C) 2000 Doobee R. Tzeck <drt@ailis.de>
+#  
+# This file is free software; as a special exception the author gives
+# unlimited permission to copy and/or distribute it, with or without 
+# modifications, as long as this notice is preserved.
+# 
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+AC_INIT(reconf)
+AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE(swapoff,0.1)
+LF_CONFIGURE_CC
+LF_CONFIGURE_CXX
+LF_HOST_TYPE
+LF_SET_WARNINGS
+AC_PROG_RANLIB
+AC_PROG_LN_S
+AC_PATH_PROG(GZIP, gzip)
+AC_OUTPUT(Makefile doc/Makefile m4/Makefile src/Makefile)

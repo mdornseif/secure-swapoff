@@ -1,0 +1,173 @@
+This is swapoff (paranoia edition).
+
+swapoff is designed to be a drop-in replacement for the swapon/off tool
+which comes with the linux-fileutils package. It tries to be compatible
+with every level of paranoia and patience.
+
+This means besides turning off swap it tries to clean all traces of any
+data previously written to the swap partition in a secure manner which
+cannot be recovered by thiefs, law enforcement or other threats.
+
+You should read Peter Gutmann's paper "Secure Deletion of Data from
+Magnetic and Solid-State Memory" to learn what this is all about. You
+can find it at http://www.cs.auckland.ac.nz/~pgut001/secure_del.html
+
+You can get around file wiping by keeping all your data on encrypted
+discs. But on some systems you still need swapspace. Putting swapspace
+on an encrypted parition often is a bad idea since this leads to bad
+performance and possibly deadlocks if the disk encription subsystem
+tries to alloc some memory for encryption.
+
+The best thing to do is to prevent swapping. This can be archieved by
+having a huge RAM or by using aplications which keep their memory from
+being swapped out by using mlock(). Have a look into gnupg's
+util/secmem.c to learn how to use mlock().  
+
+		  In case information is still swapped out the best you can do is wiping
+(delete securely) the swapspace when turning it off (unmounting it). There
+are several ways to wipe a partition. the most obvious being to use
+something like `dd if=/dev/urandom of=/dev/sdb9 bs=4096' several times
+after unmounting the swapspace. Unfortunately this is so slow that you can 
+hardly use it in real life situations. There are several tools for wiping
+block devices.
+
+But they all didn't suit my needs. I wanted a plug-in replacement for
+swapoff which didn't need any external tools and which would have to be
+*fast*. Since wiping has to be done on every shutdown, a tool that would take
+too long for this task could make the user abort the wiping process and 
+destroy all security gained by installing wipe.
+
+So now there is swapoff (paranoia edition) filling that gap. It
+unmounts a swap filesystem, overwrites the contents and creates a new
+swap filesystem. Since this is very system-specific, swapoff (paranoia
+edition) runs on Linux only.
+
+There is another tool for wiping swap space, `sswap' by van Hauser,
+but it can't unmount partitions.
+
+swapoff (paranoia edition) does not use the special patterns for overwriting
+sugested by Peter Gutmann. This is because I don't use any
+MFM or RLL disks. If you see the need for this function please
+contact me. 
+
+You can specify how you want the your disk to be overwritten by a
+string passed to swapoff through the `-m' option. Every character in this
+string represents one pass of overwriting.
+
+0-f request writing constant data on the disk. The data written to the
+    disk is x + (x * 16) so 0 requests writing 0x00, 5 requests writing
+    0x55 and so on.
+
+r   writes date from /dev/random to the disk. On typical
+    configurations /dev/random is bolcking if it lacks entropy so this may
+    get *very* slow.
+
+u   writes data from /dev/urandom to the disk. /dev/urandom does not
+    block regulary.
+
+j   writes random data produced with rijndael. This is done by filling
+    a 4096 byte buffer with random data, generating a 196 bit tiger
+    hash of it and using this hash as a key for rijndael. Then the
+    buffer is encrypted using a random IV and written to disk again
+    and again until the disk is completely overwritten.
+
+t   writes random data generated with tiger. We create a 4096 byte
+    buffer with random data, hash it with tiger and write the result at
+    the first 24 bytes of the buffer. Hashing again we write the data
+    at the next 24 bytes of the buffer and so on. After writing the
+    buffer to the disk we start over again. This method is extremly
+    slow and stupid.
+
+m   we xor a buffer of 4096 random bytes with the results from the
+    Mersenne Twister, write it to disk, xor the buffer again
+    with results from MT, write to disk, and so on. Ihis is the most
+    reasonable and fastest way to go.
+
+R,U all do the same as their small-letter counterparts, but they xor
+J,T the data with the original disk contents instead of just 
+M   overwriting it.
+
+Y   generates a random key and encrypts the disk with this key using
+    rijndael and a random IV.
+
+Most of this modes are more or less silly. For secure deletion it is
+not that important to use cryptographically strong random numbers. It is
+much more important to do enough overwriting passes to the disk.
+So just use `m' to get the fastes possible results. `u' may be used
+too, but `m' has better performance.
+
+There are some presets. The default mode is `mmmmm' which does 5 random
+passes. THIS IS NOT ENOUGH TO BE REALLY SAVE! I have choosen this mode
+for default since I thought I couldn't make the user wait to long. 
+You should use `-p' which is the same as `-m Mumtmrm3m9mcm' this should
+be reasonably save. For extra security use -P, which means `-m
+MRTj0m1m2m3m4m5m6m7m8m9mambmcmdmemfu'. For a fast insecure wipe you
+can do `-l' which is an alias for `-m m'. 
+
+What is this 4096 byte block of random bytes? After startup swapoff
+(paranoia edition) seeds the MT with getpid (), time(0), getppid(),
+random(), clock() and allocates a buffer of 4k. Then it xors the
+buffer with output of the MT. Then it trys reading data from different
+locations like "/dev/random", "/etc/ssh/ssh_random_seed",
+"/var/run/random-seed", "/dev/vbi", "/dev/audio", "/dev/sndstat",
+"/dev/isdninfo", "/dev/isdnctrl", "/proc/interrupts", "/proc/stat",
+"/proc/swaps", "/proc/uptime", "/proc/loadavg", "/proc/locks",
+"/proc/meminfo", "/proc/net/dev", "/proc/net/arp",
+"/proc/net/sockstat", "/proc/net/unix", "/proc/net/tcp", "/proc/rtc",
+"/proc/scsi/scsi", "/proc/slabinfo", "/proc/stat", "/proc/swaps",
+"/proc/uptime", "/proc/version" and "/dev/urandom" and xors them with
+the buffer. You are invited to send me suggestions for more places to
+look for entropy.
+
+Using the -r n parameter you can force swapoff (paranoia edition) to
+redo this entropy gathering process  every n blocks. The default n is
+0xffff. 
+
+Security
+
+(adapted from Berke Durak) Wiping is a tricky affair. There are
+several limitations: 
+
+        1.Since IDE and SCSI hard disks are driven by their own
+          logic, nothing guarantees that the required data is
+          written out effectively at the required place, i.e.
+          over the old data.
+ 
+        2.The successfull erasure of off-track data is a function of
+          drive temperature, usage history, drive mechanics and
+          luck.              
+
+Therefore I cannot and will not guarantee that the data erased
+with swapoff (paranoia edition) is unrecoverable. 
+
+
+Others Programms for wiping disks are 
+
+* ya-wipe 1.2.1 by Tom Vier at http://wipe.sourceforge.net/
+  (this is sometimes called `wipe' to add confusion to this world)
+
+* wipe 0.16 by Berke Durak at http://gsu.linux.org.tr/wipe/
+  It is very well documented. It comes with a script for wiping swap
+  space
+
+* wipe by 1.0beta Calvin Clark ftp://ftp.cert.dfn.de/pub/tools/admin/wipe/
+  This is old (1993), unmaintained and just writing zeros. Don't use it!
+
+* srm by Todd Burgess's http://eddie.cis.uoguelph.ca/~tburgess/ is not
+  that old but has the same problems as Calvin Clark's wipe. Todd has
+  some interesting ideas he calls the Linux Data Destruction Project (LDDP)  
+
+* secure_delete by van Hauser / THC at http://thc.pimmel.com is the
+  most interesting package. It is a nice, clean implementation and has
+  tools for filling a filesystem, overwriting RAM, wiping swap and
+  deleting files. Version 2.2 has some bug if you don't use
+  /dev/random which leads to using no entropy for overwriting. The
+  tool for overwriting memory doesn't help much - await Peter Gutman's
+  new paper regarding this subject.
+
+* BCWipe by Jetico, Inc. http://www.jetico.com/bcwipe.htm This is
+  commercial software (for non-commercial use it can be used for
+  free) which comes with source. I'm not impressed by this software
+  coming from a professional security vendor. For example on a first
+  look they don't seem to care about races.
+
