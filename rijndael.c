@@ -1,4 +1,4 @@
-/* $Id: rijndael.c,v 1.2 2000/04/11 08:54:24 drt Exp $
+/* $Id: rijndael.c,v 1.3 2000/04/11 08:58:53 drt Exp $
  *
  * rijndael in one C file
  *
@@ -13,8 +13,8 @@
  * This code is placed in the public domain.
  *
  * $Log: rijndael.c,v $
- * Revision 1.2  2000/04/11 08:54:24  drt
- * swapoff 0.01a
+ * Revision 1.3  2000/04/11 08:58:53  drt
+ * swapoff 0.01b
  *
  * Revision 1.2  2000/02/19 16:21:03  drt
  * Fixed compile-time warnings

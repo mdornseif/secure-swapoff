@@ -1,4 +1,4 @@
-// $Id: mt19937-cokus.c,v 1.2 2000/04/11 08:54:24 drt Exp $
+// $Id: mt19937-cokus.c,v 1.3 2000/04/11 08:58:53 drt Exp $
 //
 // This is the ``Mersenne Twister'' random number generator MT19937, which
 // generates pseudorandom integers uniformly distributed in 0..(2^32 - 1)
@@ -50,8 +50,8 @@
 // It would be nice to CC: <Cokus@math.washington.edu> when you write.
 //
 // $Log: mt19937-cokus.c,v $
-// Revision 1.2  2000/04/11 08:54:24  drt
-// swapoff 0.01a
+// Revision 1.3  2000/04/11 08:58:53  drt
+// swapoff 0.01b
 //
 // Revision 1.2  2000/02/16 13:31:57  drt
 // blockMT added to produce large blocks of random data

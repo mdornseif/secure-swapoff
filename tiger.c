@@ -2,11 +2,11 @@
  * by biham@cs.technion.ac.il and rja14@cl.cam.ac.uk.
  * http://www.cs.technion.ac.il/~biham/Reports/Tiger/
  * 
- * $Id: tiger.c,v 1.2 2000/04/11 08:54:24 drt Exp $
+ * $Id: tiger.c,v 1.3 2000/04/11 08:58:54 drt Exp $
  * 
  * $Log: tiger.c,v $
- * Revision 1.2  2000/04/11 08:54:24  drt
- * swapoff 0.01a
+ * Revision 1.3  2000/04/11 08:58:54  drt
+ * swapoff 0.01b
  *
  * Revision 1.2  2000/02/19 16:21:41  drt
  * fixed compile-time warnings

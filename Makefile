@@ -1,17 +1,22 @@
 CC = gcc
-CFLAGS = -Wall -O3
+VERSION = 0.01
+DISTRIBUTION = b
+CFLAGS = -Wall -O3 -DVERSION=\"$(VERSION)\" -DDISTRIBUTION=\"$(DISTRIBUTION)\"
 PROGS = swapoff
 DIST = Makefile mt19937-cokus.c rijndael.c swapoff.c tiger.c swapoff.8 CHANGES README  
-VERSION = 0.01
-DISTRIBUTION = a
 
 srcdir = .
 
-all: $(PROGS)
+all: $(PROGS) buildnr.h
 
 swapoff: swapoff.o mt19937-cokus.o rijndael.o tiger.o
-	$(CC) $(CFLAGS) -o $@ $^ 
+	$(CC) -o $@ $^
 	strip $@
+	rm buildnr.h
+
+buildnr.h:
+	sh -c "echo `cat build` + 1 | bc > build"
+	echo "#define BUILD " `cat build` > buildnr.h
 clean:
 	rm -f *.o swapoff core
 
@@ -29,6 +34,7 @@ dist: $(DIST)
 	tar cf - $(distdir)/* | gzip -9 > $(FTP_DIST)
 	rm -Rf $(distdir)  
 	@echo "Done building distribution"
+	scp ./$(FTP_DIST)  koeln.ccc.de:public_html/
 
 md5sum:
 	cd $(FTPDIR) ; md5sum *.gz > MD5SUM

@@ -1,7 +1,7 @@
 /*
  * swappoff - turning off swapspace and scramble the data on the device
  *
- * $Id: swapoff.c,v 1.2 2000/04/11 08:54:24 drt Exp $
+ * $Id: swapoff.c,v 1.3 2000/04/11 08:58:53 drt Exp $
  *
  * Based on mkswap and swapon
  *
@@ -17,8 +17,15 @@
  * swapoff was hacked 1999 by Doobee R. Tzeck <drt@ailis.de>
  *
  * $Log: swapoff.c,v $
- * Revision 1.2  2000/04/11 08:54:24  drt
- * swapoff 0.01a
+ * Revision 1.3  2000/04/11 08:58:53  drt
+ * swapoff 0.01b
+ *
+ * Revision 1.2  2000/02/20 09:40:31  drt
+ * Added -r to reseed the randompool.
+ * Changed the paranoia mode(-p) to Mumtmrm3m9mcm
+ * and extra-paranoia mode (-P) to MRTj0m1m2m3m4m5m6m7m8m9mambmcmdmemfu.
+ * -v output fixed
+ * added signal handling
  *
  * Revision 1.1  2000/02/19 15:33:48  drt
  * Initial revision
@@ -44,6 +51,8 @@
 #include <sys/mman.h>
 #include <sys/swap.h>
 
+#include "buildnr.h"
+
 /* Definitions for Tiger */
 void tiger(unsigned char *, unsigned long long int, unsigned long long int*);  
 
@@ -67,23 +76,24 @@ unsigned long randomMT(void);
 
 #define BLKGETSIZE _IO(0x12,96)
 #define SWAPVERSION = 1;
-#define MAX_BADPAGES    ((pagesize-1024-128*sizeof(int)-10)/sizeof(int)) 
 #define _PATH_FSTAB     "/etc/fstab"
 #define PROC_SWAPS      "/proc/swaps" 
 
-static char *version = "0.01 alpha";
-static char *rcsid = "$Id: swapoff.c,v 1.2 2000/04/11 08:54:24 drt Exp $";
+static char *version = VERSION;
+static char *distribution = DISTRIBUTION;
+static char *rcsid = "$Id: swapoff.c,v 1.3 2000/04/11 08:58:53 drt Exp $";
 static char *superparanoidmode = "MRTj0m1m2m3m4m5m6m7m8m9mambmcmdmemfu";
 static char *paranoidmode = "Mumtmrm3m9mcm";
-
 // our global configuration
 int verbose = 0;
+
 int quiet = 0;
 int noO_SYNC = 0;
 int nosync = 0; 
 int all = 0;
 int debug = 3;
-off_t reseed = 1024;
+long reseed = 0xffff;
+long pages_done = 0;
 char *overwritemode = "mmmmm";
 int shutdowndevice = -1;
 
@@ -361,6 +371,7 @@ void getRandomData(unsigned char *buf, size_t len)
   seedMT((long long) getpid () *
 	 (long long) time(0) *
 	 (long long) getppid() * 
+	 (long long) random() * 
 	 (long long) clock());
   
   /* try to seed some entropy into the c library 
@@ -562,7 +573,10 @@ int write_random(int device, unsigned long total_pages, char mode)
 	  /* get a random "IV" */
 	  blockMT(IV, 16);
 
-	  /* initialize  rijndael with this key */
+	  /* get a 196 Bit hash of buffer */
+	  tiger(buffer, pagesize, res); 
+
+	  /* initialize rijndael with this key */
 	  rijndaelKeySched((unsigned char*) res, 196, rKeySched);
 
 	  break;
@@ -614,7 +628,20 @@ int write_random(int device, unsigned long total_pages, char mode)
 	  if(verbose)
 	    {
 	      printf(" %07u\b\b\b\b\b\b\b\b", current_page);
-	      //	      fflush(stdout);
+	    }
+
+	  
+	  pages_done++;
+	  /* Do we need to reseed the entropypool ? */
+	  if(pages_done > reseed)
+	    {
+	      pages_done = 0;
+	      getRandomData(buffer, pagesize);
+	      if(verbose)
+		{
+		  printf("          reseeding at  %07u\b\b\b\b\b\b\b\b", current_page);
+		  printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
+		}
 	    }
 
 	  /* act depending on the mode */
@@ -725,7 +752,6 @@ int write_random(int device, unsigned long total_pages, char mode)
 	  /* write data to disk */
 	  if ((pagesize) != write(device, buffer, pagesize)) 
 	    {
-	      current_page++;
 	      perror("can't write\a  ");
 	      status++;
 	    }
@@ -934,10 +960,12 @@ void cleanup()
       /* we need to setup swapspace zu keep the partition intact
 	 before exiting */
       
+      printf (" mkswap ");
       status |= mkswap(shutdowndevice);      
       fsync(shutdowndevice);
       sync();
       close(shutdowndevice);
+      printf ("\n");
     }
   fflush(stdout);
   fflush(stderr);
@@ -958,7 +986,7 @@ int main(int argc, char ** argv)
       switch (c)
 	{        
 	case 'V':
-	  fprintf(stderr, "swapoff (paranoia edition) %s\n  %s\n", version, rcsid);
+	  fprintf(stderr, "swapoff (paranoia edition) %s%s build %d \n  %s\n", version, distribution, BUILD, rcsid);
 	  fprintf(stderr, "  Doobee R. Tzeck <drt@ailis.de>\n");
 	  fprintf(stderr, "  based on mkswap(8) 1999-02-22 /swapoff(8) 0.99 from util-linux-2.9w\n");
 	  exit(0);
