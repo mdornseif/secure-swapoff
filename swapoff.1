@@ -1,0 +1,184 @@
+.\" This definition swiped from the gcc(1) man page
+.de Sp
+.if n .sp
+.if t .sp 0.4
+.. 
+.TH swapoff 1 "paranoia edition" 
+.SH NAME
+swapoff (paranoia edition) \- turn off swappspace and try hard to overwrite it
+.SH SYNOPSIS
+.B swapoff [-h] [-v] [-V] [-q] [-r <blocks>] [-l] [-p] [-P] [-m <methods>] [-s] [-S] [-a | directory/mountpoint ...] 
+.SH DESCRIPTION
+.PP
+.I swapoff 
+is designed to turn off swapspace and clean all traces of any data
+written previously to the swap partition in a secure manner which can
+not be recovered by thiefs, law enforcement or other threats.
+.I swapoff
+is a designed to be drop-in replacement for the swapon/off tool which
+comes with the linux-fileutils package, it tries to be compatible with
+every level of paranoia and patience.
+.PP
+.I swapoff 
+disables swapping on the specified devices and files, or on all swap
+entries in /etc/fstab when the -a flag is given. Then it tries to
+overwrite the partitions with random data and at least it it creates
+new swapfilesystems on the partitions.
+.PP
+.I swapoff 
+can just write some form of random data to the disk or it can be asked
+to 
+.B XOR
+the data on the disk with random data. This slows down 
+.I swapoff 
+even more since it has to do reads and writes instead only writes but
+adds some extra security. The type of data to be written to the disk
+can be configured with a string. It defaults to a not that secure
+configuration to not scare non-paranoid users away.
+.PP
+.PP
+If you using encrypted partitions you don't have to worry about secure
+deletion, backup- and tempfiles since your deleted data is still
+encrypted. But you still need a swap partition and putting a swap
+partition on a encrypted device is generally a bead idea. So you can
+add extra RAM to your box and disable swap or you risc that sensive
+information is swapped out to your disk and cout be found by others
+there. If you could not afford this amount of RAM you should at least
+regulary sweep your swap space. By integrating this function into
+.B swapoff 
+it can be assured that thi is done at every shutdown.
+.PP
+.I swapoff 
+does not use the patterns suggested by Peter Gutmann because I know
+noone using MFM or RLL Drives anymore. If you think this ist a Flaw,
+contact me.
+
+.SH COMMANDLINE OPTIONS
+.PP
+.TP
+.B \-h
+show help
+.TP
+.B \-v
+verbose mode
+.TP
+.B \-V
+print version.
+.TP
+.B \-q
+quiet- do not brabble
+.TP
+.B \-r 
+reseed our internal entropy pool every 
+.B <blocks>
+blocks 
+.TP
+.B \-l
+total low security mode. The same as 
+.B -m j
+.TP
+.B \-p 
+paranoid mode - you should use this. The same as
+.B -m YFT8u4j0tBJ
+.TP
+.B \-P 
+extra paranoid mode. The same as
+.B -m YFDT8acmeu12u34t56r79j0bJ
+.TP
+.B \-m
+use the methods given in 
+.B <methods> 
+to overwrite the partitions. See below for valid Methods
+.TP
+.B \-s
+do not open with O_SYNC
+.TP
+.B \-S
+do not call sync() all the time
+.TP
+.B \-a
+unmount and overwrite all swapdevices
+.TP
+.PP
+.B directory/mountpoint
+this is the location of the file created in your filesystem. It should
+lie on the partition you want to write.
+.SH OVERWRITING PATTERNS
+.PP
+.TP
+.B 0
+write 0x00
+.TP
+.B 1
+write 0x11
+.TP
+.B f 
+write 0xff, guess what 2-9 and a-e do ...
+.TP
+.B r
+write data from /dev/random. beware, /dev/random 
+.I will
+block if you don't have some gadget feeding your entropy pool with 
+something so this will get very slow
+.TP
+.B u
+write data from /dev/urandom
+.TP
+.B j
+write data generated with rijndael
+.TP
+.B t
+write data generated with tiger
+.TP
+.B m
+write data generated with the Mersenne Twister
+.TP
+.B Y
+encrypt disk contents with rijandel and a random key
+.TP
+.B R, U, J, T, M 
+the same as 
+.B r, u, j, t, M
+but xor the date with the old data on the disk
+.PP   
+.SH LIMITATIONS
+.I swapoff
+works just with Linux 2.2 and above.
+.PP
+Since 
+.I swapoff
+is an userspace programm knowing nothing about the hardware it can not
+ensure that the data is actually written to the disk. It tries to
+convince the kernel to do so but this ensures nothing. If you have a
+harddisk with big cache or a caching controller you should not rely on
+this
+.B swapoff
+getting several layers of random data above your original swapspace.
+.SH BUGS
+.B swapoff
+should check if different swap partions are on different harddrives and
+write to them in paralell.
+.PP
+The generation of different random data is to slow.
+.PP
+.B swapoff
+should use nonblocking IO.
+.PP
+While waiting for the harddisk it should write random data to the
+memory to keep SDRAM from remembering your secrets.
+.SH AUTHOR
+.Sp
+doobee
+.I <drt@ailis.de>
+.SH SEE ALSO
+.I srm
+(1),
+.I sswap
+(1),
+.I smem
+(1),
+.I shred
+(1),
+.I wipe
+(1)     
+
