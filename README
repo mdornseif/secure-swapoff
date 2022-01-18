@@ -1,3 +1,5 @@
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
+
 This is swapoff (paranoia edition).
 
 swapoff is designed to be a drop-in replacement for the swapon/off tool
